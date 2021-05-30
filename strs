@@ -1,0 +1,112 @@
+#!/usr/bin/env -S cargo eval --
+
+// cargo-deps: argh = "0.1", object = "0.24.0"
+
+use argh::FromArgs;
+
+use std::fs::OpenOptions;
+use std::io::{self, BufReader, Read, Write};
+use std::path::PathBuf;
+
+use object::{File, Object, ObjectSection, SectionKind};
+
+const MIN_STR_LEN: usize = 4;
+
+const ELF_SIG: [u8; 4] = [0x7F, 0x45, 0x4C, 0x46];
+const MACH_O_32_SIG: [u8; 4] = [0xFE, 0xED, 0xFA, 0xCE];
+const MACH_O_64_SIG: [u8; 4] = [0xFE, 0xED, 0xFA, 0xCF];
+const MACH_O_FAT_SIG: [u8; 4] = [0xCA, 0xFE, 0xBA, 0xBE];
+const MACH_O_32_REV_SIG: [u8; 4] = [0xCE, 0xFA, 0xED, 0xFE];
+const MACH_O_64_REV_SIG: [u8; 4] = [0xCF, 0xFA, 0xED, 0xFE];
+
+#[derive(FromArgs)]
+#[argh(description = "Rust clone of strings(1).")]
+struct App {
+    #[argh(
+        switch,
+        description = "ignore heuristics and read all sections of an object file."
+    )]
+    all: bool,
+
+    #[argh(
+        option,
+        description = "the minimum length a valid string needs to be in order to be printed.",
+        default = "MIN_STR_LEN"
+    )]
+    min_length: usize,
+
+    #[argh(positional, description = "input file.")]
+    file: PathBuf,
+}
+
+fn main() {
+    let app: App = argh::from_env();
+
+    let file = OpenOptions::new()
+        .read(true)
+        .open(app.file)
+        .expect("could not open source");
+
+    let mut reader = BufReader::new(file);
+
+    // Preallocate 4MB of space since we're usually dealing with files
+    let mut contents = Vec::with_capacity(1024 * 1024 * 4);
+    reader.read_to_end(&mut contents);
+
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+
+    let mut magic = [0, 0, 0, 0];
+    if contents.len() >= 4 {
+        magic.copy_from_slice(&contents[..4]);
+    }
+
+    if is_object_file(&magic) {
+        print_object_strings(&mut handle, &contents, app.all, app.min_length);
+    } else {
+        print_strings(&mut handle, &contents, app.min_length);
+    }
+}
+
+fn is_object_file(magic: &[u8; 4]) -> bool {
+    magic == &ELF_SIG
+        || magic == &MACH_O_FAT_SIG
+        || magic == &MACH_O_32_SIG
+        || magic == &MACH_O_64_SIG
+        || magic == &MACH_O_32_REV_SIG
+        || magic == &MACH_O_64_REV_SIG
+}
+
+fn print_object_strings(handle: &mut impl Write, contents: &[u8], all: bool, min_length: usize) {
+    // We could also read this in a lazy fashion but... I'm lazy at the moment ;)
+    let object = File::parse(contents).expect("Could not parse object file");
+    object
+        .sections()
+        .filter(|section| all || section.kind() == SectionKind::Data)
+        .for_each(|section| {
+            let contents = section.data().expect("section should have data");
+            print_strings(handle, contents, min_length);
+        });
+}
+
+fn print_strings(handle: &mut impl Write, contents: &[u8], min_length: usize) {
+    let mut start = 0;
+    let mut end = 0;
+
+    for c in contents.iter() {
+        let is_printable = c.is_ascii_graphic() || c.is_ascii_whitespace();
+        let has_minimum_len = (end - start) >= min_length;
+
+        if !is_printable && has_minimum_len {
+            handle.write(&contents[start..end]);
+            handle.write(&[b'\n']);
+            start = end + 1;
+        } else if !is_printable {
+            start = end + 1;
+        }
+
+        end += 1;
+    }
+
+    handle.flush();
+}

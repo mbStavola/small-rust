@@ -1,0 +1,147 @@
+#!/usr/bin/env -S cargo eval --
+
+//! ```cargo
+//! [dependencies]
+//! argh = "0.1"
+//! reqwest = { version = "0.11.3", features = ["blocking"] }
+//! ```
+
+use argh::FromArgs;
+use reqwest::blocking::Client;
+use reqwest::redirect::Policy;
+
+use std::fs::OpenOptions;
+use std::io::{BufReader, Read};
+use std::path::PathBuf;
+use std::str::FromStr;
+
+const BASE_URL: &str = "https://ghostbin.co";
+
+#[derive(Debug)]
+enum ExpirationTime {
+    Never,
+    TenMinutes,
+    OneHour,
+    OneDay,
+    Fortnight,
+}
+
+impl FromStr for ExpirationTime {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<ExpirationTime, String> {
+        let expiration = match value {
+            "never" => ExpirationTime::Never,
+            "10m" | "10 m" | "10minutes" | "10 minutes" | "ten m" | "ten minutes" => {
+                ExpirationTime::TenMinutes
+            }
+            "1h" | "1 h" | "1hour" | "1 hour" | "one h" | "one hour" => ExpirationTime::OneHour,
+            "1d" | "1 d" | "1day" | "1 day" | "one d" | "one day" => ExpirationTime::OneDay,
+            "14d" | "14 d" | "14days" | "14 days" | "fourteen d" | "fourteen days"
+            | "fortnight" => ExpirationTime::Fortnight,
+            _ => return Err("unrecoginized duration. try: never, 10m, 1h, 1d, or 14d.".to_string()),
+        };
+
+        Ok(expiration)
+    }
+}
+
+impl Into<String> for ExpirationTime {
+    fn into(self) -> String {
+        match self {
+            ExpirationTime::Never => "-1".to_string(),
+            ExpirationTime::TenMinutes => "10m".to_string(),
+            ExpirationTime::OneHour => "1h".to_string(),
+            ExpirationTime::OneDay => "1d".to_string(),
+            ExpirationTime::Fortnight => "14d".to_string(),
+        }
+    }
+}
+
+#[derive(FromArgs)]
+#[argh(description = "Copies a local file onto ghostbin.co.")]
+struct App {
+    #[argh(
+        option,
+        description = "language to apply syntax highlighting.",
+        default = r#""text".to_string()"#
+    )]
+    language: String,
+
+    #[argh(option, description = "how long to keep the file online.")]
+    expiration: Option<ExpirationTime>,
+
+    #[argh(option, description = "title of the uploaded file.")]
+    title: Option<String>,
+
+    #[argh(
+        option,
+        description = "password to access the file.",
+        default = r#""".to_string()"#
+    )]
+    password: String,
+
+    #[argh(positional, description = "file to share.")]
+    file: PathBuf,
+}
+
+fn main() {
+    let app: App = argh::from_env();
+
+    let file = OpenOptions::new()
+        .read(true)
+        .open(app.file.clone())
+        .expect("could not open file");
+
+    let mut reader = BufReader::new(file);
+
+    let mut contents = String::new();
+    reader
+        .read_to_string(&mut contents)
+        .expect("should be able to read file contents");
+
+    let expiration: String = app.expiration.unwrap_or(ExpirationTime::TenMinutes).into();
+
+    let filename = app
+        .file
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| name.to_string());
+
+    let title = app
+        .title
+        .or_else(|| filename)
+        .unwrap_or_else(|| "".to_string());
+
+    println!("Uploading file");
+    let client = Client::builder()
+        .redirect(Policy::none())
+        .build()
+        .expect("should be able to build client");
+
+    let res = client
+        .post(format!("{}/paste/new", BASE_URL))
+        .header("User-Agent", "ghoshare")
+        .form(&[
+            ("expire", expiration),
+            ("password", app.password),
+            ("lang", app.language),
+            ("title", title),
+            ("text", contents),
+        ])
+        .send()
+        .expect("unexpected error while uploading file");
+
+    if res.status() != 303 {
+        panic!("Unexpected status code {}", res.status());
+    }
+
+    let headers = res.headers();
+    let path = headers
+        .get("location")
+        .expect("we should be redirected!")
+        .to_str()
+        .expect("should be able to get location header value");
+
+    println!("URL: {}", format!("{}{}", BASE_URL, path));
+}

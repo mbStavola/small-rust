@@ -1,0 +1,58 @@
+#!/usr/bin/env -S cargo eval --
+
+// cargo-deps: argh = "0.1", humantime = "2.1.0"
+
+use argh::FromArgs;
+
+use std::thread;
+use std::time::{Duration, Instant};
+
+#[derive(FromArgs)]
+#[argh(description = "Keep track of how long a task runs or set a timer for some period of time.")]
+struct App {
+    #[argh(
+        option,
+        description = "how long to wait before starting the stopwatch."
+    )]
+    delay: Option<humantime::Duration>,
+
+    #[argh(
+        option,
+        description = "how long to wait between timer updates.",
+        default = "\"1ms\".parse::<humantime::Duration>().unwrap()"
+    )]
+    pause: humantime::Duration,
+
+    #[argh(option, description = "how long to run the stopwatch.")]
+    duration: Option<humantime::Duration>,
+}
+
+fn main() {
+    let app: App = argh::from_env();
+
+    let delay: Option<Duration> = app.delay.map(|d| d.into());
+    let pause = app.pause.into();
+    let duration = app
+        .duration
+        .map(|d| d.into())
+        .unwrap_or_else(|| Duration::new(u64::MAX, 0));
+
+    if let Some(delay) = delay {
+        println!("Waiting {:?}...", delay);
+        thread::sleep(delay);
+    }
+
+    let now = Instant::now();
+
+    let mut elapsed = now.elapsed();
+    while elapsed < duration {
+        print!("\x1B[2K\rElapsed: {}", humantime::format_duration(elapsed));
+        thread::sleep(pause);
+        elapsed = now.elapsed();
+    }
+
+    print!(
+        "\x1B[2K\rElapsed: {}\nStopped\x07",
+        humantime::format_duration(elapsed)
+    );
+}
