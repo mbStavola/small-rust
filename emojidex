@@ -139,6 +139,9 @@ struct App {
     #[argh(option, description = "limit the amount of results returned.")]
     limit: Option<usize>,
 
+    #[argh(switch, description = "only displays images.")]
+    images_only: bool,
+
     #[argh(switch, description = "filter out r18 emoji.")]
     sfw: bool,
 
@@ -161,6 +164,7 @@ fn main() {
         resolution,
         limit,
         auth,
+        images_only,
     } = argh::from_env();
 
     let tmp_dir = env::temp_dir();
@@ -218,26 +222,29 @@ fn main() {
         let encoded_code = emoji.code.replace(" ", "_");
         let svg_url = format!("{}/{}.svg", BASE_CDN_URL, encoded_code.clone());
 
-        println!("\x1B[1mURL:\x1B[0m\n\t{}\n", svg_url.clone());
+        if !images_only {
+            println!("\x1B[1mURL:\x1B[0m\n\t{}\n", svg_url.clone());
 
-        println!(
-            "\x1B[1mHTML:\x1B[0m\n\t<img class=\"emojidex-emoji\" src=\"{}\" emoji-code=\"{}\" alt=\"{}\"{} />\n",
-            svg_url.clone(),
-            encoded_code.clone(),
-            emoji.code.clone(),
-            emoji
-                .moji
-                .as_ref()
-                .map(|moji| format!(" emoji-moji=\"{}\"", moji))
-                .unwrap_or_else(|| "".to_string()),
-        );
+            println!(
+                "\x1B[1mHTML:\x1B[0m\n\t<img class=\"emojidex-emoji\" src=\"{}\" emoji-code=\"{}\" alt=\"{}\"{} />\n",
+                svg_url.clone(),
+                encoded_code.clone(),
+                emoji.code.clone(),
+                emoji
+                    .moji
+                    .as_ref()
+                    .map(|moji| format!(" emoji-moji=\"{}\"", moji))
+                    .unwrap_or_else(|| "".to_string()),
+            );
 
-        println!(
-            "\x1B[1mMD:\x1B[0m\n\t![{}]({} \"{}\")\n",
-            emoji.moji.unwrap_or(encoded_code.clone()),
-            svg_url.clone(),
-            emoji.code.clone(),
-        );
+            println!(
+                "\x1B[1mMD:\x1B[0m\n\t![{}]({} \"{}\")\n",
+                emoji.moji.unwrap_or(encoded_code.clone()),
+                svg_url.clone(),
+                emoji.code.clone(),
+            );
+        }
+
         if resolution != Resolution::None {
             let filepath = tmp_dir.join(format!("{}.png", encoded_code));
             let mut file = File::create(filepath.clone()).expect("should be able to create file");
