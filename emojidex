@@ -174,7 +174,11 @@ fn main() {
     let code = if code.is_none() && tags.is_empty() && category.is_empty() {
         vec![("code_cont", "ferris".to_string())]
     } else {
-        vec![("code_cont", code.unwrap_or_else(|| "".to_string()))]
+        vec![(
+            "code_cont",
+            code.map(|code| code.replace(" ", "_"))
+                .unwrap_or_else(|| "".to_string()),
+        )]
     };
 
     let terms = tags
