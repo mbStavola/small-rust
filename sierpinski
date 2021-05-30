@@ -1,0 +1,47 @@
+#!/usr/bin/env -S cargo eval --
+
+// cargo-deps: argh = "0.1"
+
+use argh::FromArgs;
+
+const TRIANGLE: char = '▲';
+
+#[derive(FromArgs)]
+#[argh(description = "Prints a Sierpinski triangle.")]
+struct App {
+    #[argh(positional, description = "size of the Sierpinski triangle.")]
+    size: Option<u8>,
+}
+
+fn main() {
+    let App { size } = argh::from_env();
+    let size = size.unwrap_or(1);
+
+    let height = 2_usize.pow(size as u32);
+    let width = (2 * height) - 1;
+
+    let mut bounding_box = vec![vec![0_u16; width]; height];
+    bounding_box[0][height - 1] = 1;
+
+    let mut last_row = bounding_box[0].clone();
+    for (i, row) in bounding_box.iter_mut().skip(1).enumerate() {
+        for (j, cell) in row.iter_mut().enumerate() {
+            let top_left = last_row.get(j - 1).unwrap_or(&0);
+            let top_right = last_row.get(j + 1).unwrap_or(&0);
+
+            *cell = top_left + top_right;
+        }
+        last_row = row.clone();
+    }
+
+    for row in bounding_box {
+        for cell in row {
+            if cell == 0 || cell % 2 == 0 {
+                print!(" ");
+            } else {
+                print!("{}", TRIANGLE);
+            }
+        }
+        println!();
+    }
+}
