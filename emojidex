@@ -133,6 +133,9 @@ struct App {
     )]
     resolution: Resolution,
 
+    #[argh(option, description = "account auth token (required for r18 content).")]
+    auth: Option<String>,
+
     #[argh(option, description = "limit the amount of results returned.")]
     limit: Option<usize>,
 
@@ -157,6 +160,7 @@ fn main() {
         code,
         resolution,
         limit,
+        auth,
     } = argh::from_env();
 
     let tmp_dir = env::temp_dir();
@@ -181,10 +185,15 @@ fn main() {
         )]
     };
 
+    let auth_token = auth
+        .map(|auth| vec![("auth_token", auth)])
+        .unwrap_or_else(|| vec![]);
+
     let terms = tags
         .into_iter()
         .chain(category)
         .chain(code)
+        .chain(auth_token)
         .collect::<Vec<(&str, String)>>();
 
     let client = Client::new();
