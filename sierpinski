@@ -4,17 +4,75 @@
 
 use argh::FromArgs;
 
-const TRIANGLE: char = '▲';
+use std::fmt;
+use std::str::FromStr;
+
+const DELTA: &str = "Δ";
+const FILLED_TRIANGLE: &str = "▲";
+const HOLLOW_TRIANGLE: &str = "△";
+const DOT: &str = ".";
+const CARAT: &str = "^";
+
+#[derive(Copy, Clone)]
+enum TriangleType {
+    Delta,
+    Filled,
+    Hollow,
+    Dot,
+    Carat,
+}
+
+impl fmt::Display for TriangleType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let displayable = match self {
+            TriangleType::Delta => DELTA,
+            TriangleType::Filled => FILLED_TRIANGLE,
+            TriangleType::Hollow => HOLLOW_TRIANGLE,
+            TriangleType::Dot => DOT,
+            TriangleType::Carat => CARAT,
+        };
+
+        write!(f, "{}", displayable)
+    }
+}
+
+impl FromStr for TriangleType {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<TriangleType, String> {
+        let triangle =
+            match value.to_lowercase().as_str() {
+                "delta" => TriangleType::Delta,
+                "filled" => TriangleType::Filled,
+                "hollow" => TriangleType::Hollow,
+                "dot" => TriangleType::Dot,
+                "carat" => TriangleType::Carat,
+                _ => return Err(
+                    "unrecognized triangle type. try one of: delta, filled, hollow, dot, or carat."
+                        .to_string(),
+                ),
+            };
+
+        Ok(triangle)
+    }
+}
 
 #[derive(FromArgs)]
 #[argh(description = "Prints a Sierpinski triangle.")]
 struct App {
+    #[argh(
+        option,
+        description = "triangle type to use.",
+        default = "TriangleType::Filled"
+    )]
+    triangle: TriangleType,
+
     #[argh(positional, description = "size of the Sierpinski triangle.")]
     size: Option<u8>,
 }
 
 fn main() {
-    let App { size } = argh::from_env();
+    let App { size, triangle } = argh::from_env();
     let size = size.unwrap_or(1);
 
     let height = 2_usize.pow(size as u32);
@@ -39,7 +97,7 @@ fn main() {
             if cell == 0 || cell % 2 == 0 {
                 print!(" ");
             } else {
-                print!("{}", TRIANGLE);
+                print!("{}", triangle);
             }
         }
         println!();
