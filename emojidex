@@ -6,16 +6,16 @@
 //! reqwest = { version = "0.11.3", features = ["blocking", "json"] }
 //! serde = { version = "1.0", features = ["derive"] }
 //! viuer = "0.4.0"
+//! image = "0.23.14"
 //! ```
 
 use argh::FromArgs;
+use image::io::Reader;
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use viuer::Config;
 
-use std::env;
-use std::fs::File;
-use std::io;
+use std::io::{BufReader, Cursor};
 use std::str::FromStr;
 
 const BASE_API_URL: &str = "https://www.emojidex.com/api/v1";
@@ -167,8 +167,6 @@ fn main() {
         images_only,
     } = argh::from_env();
 
-    let tmp_dir = env::temp_dir();
-
     let tags = tag
         .into_iter()
         .map(|tag| ("tags[]", tag))
@@ -246,10 +244,7 @@ fn main() {
         }
 
         if resolution != Resolution::None {
-            let filepath = tmp_dir.join(format!("{}.png", encoded_code));
-            let mut file = File::create(filepath.clone()).expect("should be able to create file");
-
-            let mut res = client
+            let res = client
                 .get(format!(
                     "{}/{}/{}.png",
                     BASE_CDN_URL,
@@ -258,10 +253,18 @@ fn main() {
                 ))
                 .send()
                 .expect("should be able to get image");
-            io::copy(&mut res, &mut file).expect("should be able to copy file");
 
-            viuer::print_from_file(
-                filepath.to_str().unwrap(),
+            let bytes = res.bytes().expect("should be able to get bytes");
+            let reader = Reader::new(BufReader::new(Cursor::new(bytes)))
+                .with_guessed_format()
+                .expect("should be able to guess format");
+
+            let image = reader
+                .decode()
+                .expect("should be able to interpret as image");
+
+            viuer::print(
+                &image,
                 &Config {
                     absolute_offset: false,
                     ..Default::default()
