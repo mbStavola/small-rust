@@ -124,7 +124,7 @@ struct Emoji {
 }
 
 #[derive(FromArgs)]
-#[argh(description = "Copies a local file onto ghostbin.co.")]
+#[argh(description = "Searches and displays emoji from emojidex.")]
 struct App {
     #[argh(
         option,
