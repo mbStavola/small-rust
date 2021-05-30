@@ -1,0 +1,255 @@
+#!/usr/bin/env -S cargo eval --
+
+//! ```cargo
+//! [dependencies]
+//! argh = "0.1"
+//! reqwest = { version = "0.11.3", features = ["blocking", "json"] }
+//! serde = { version = "1.0", features = ["derive"] }
+//! viuer = "0.4.0"
+//! ```
+
+use argh::FromArgs;
+use reqwest::blocking::Client;
+use serde::Deserialize;
+use viuer::Config;
+
+use std::env;
+use std::fs::File;
+use std::io;
+use std::str::FromStr;
+
+const BASE_API_URL: &str = "https://www.emojidex.com/api/v1";
+const BASE_CDN_URL: &str = "https://cdn.emojidex.com/emoji";
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+enum Resolution {
+    None,
+    LDPI,
+    MDPI,
+    HDPI,
+    XHDPI,
+    XXHDPI,
+    XXXHDPI,
+    PX8,
+    PX16,
+    PX32,
+    PX64,
+    PX128,
+    PX256,
+    PX512,
+    Hanko,
+    Seal,
+}
+
+impl FromStr for Resolution {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Resolution, String> {
+        let resolution = match value.to_uppercase().as_str() {
+            "NONE" | "OFF" => Resolution::None,
+            "LDPI" => Resolution::LDPI,
+            "MDPI" => Resolution::MDPI,
+            "HDPI" => Resolution::HDPI,
+            "XHDPI" => Resolution::XHDPI,
+            "XXHDPI" => Resolution::XXHDPI,
+            "XXXHDPI" => Resolution::XXXHDPI,
+            "PX8" => Resolution::PX8,
+            "PX16" => Resolution::PX16,
+            "PX32" => Resolution::PX32,
+            "PX64" => Resolution::PX64,
+            "PX128" => Resolution::PX128,
+            "PX256" => Resolution::PX256,
+            "PX512" => Resolution::PX512,
+            "HANKO" => Resolution::Hanko,
+            "SEAL" => Resolution::Seal,
+            _ => {
+                let msg = "Unrecognized resolution, try one of: none, ldpi, mdpi, hdpi, xhdpi, xxhdpi, xxxdpi, px8, px16, px32, px64, px128, px256, px512, hanko, seal.";
+                return Err(msg.to_string());
+            }
+        };
+
+        Ok(resolution)
+    }
+}
+
+impl Into<String> for Resolution {
+    fn into(self) -> String {
+        let resolution = match self {
+            Resolution::LDPI => "ldpi",
+            Resolution::MDPI => "mdpi",
+            Resolution::HDPI => "hdpi",
+            Resolution::XHDPI => "xhdpi",
+            Resolution::XXHDPI => "xxhdpi",
+            Resolution::XXXHDPI => "xxxhdpi",
+            Resolution::PX8 => "px8",
+            Resolution::PX16 => "px16",
+            Resolution::PX32 => "px32",
+            Resolution::PX64 => "px64",
+            Resolution::PX128 => "px128",
+            Resolution::PX256 => "px256",
+            Resolution::PX512 => "px512",
+            Resolution::Hanko => "hanko",
+            Resolution::Seal => "seal",
+            _ => panic!("unsupported resolution string"),
+        };
+
+        resolution.to_string()
+    }
+}
+
+#[derive(Deserialize, Debug)]
+struct SearchResponse {
+    meta: SearchMeta,
+    emoji: Vec<Emoji>,
+}
+
+#[derive(Deserialize, Debug)]
+struct SearchMeta {
+    count: usize,
+    total_count: usize,
+    page: usize,
+}
+
+#[derive(Deserialize, Debug)]
+struct Emoji {
+    code: String,
+    moji: Option<String>,
+    unicode: Option<String>,
+    category: String,
+    tags: Vec<String>,
+    variants: Vec<String>,
+    link: Option<String>,
+    base: String,
+    r18: bool,
+}
+
+#[derive(FromArgs)]
+#[argh(description = "Copies a local file onto ghostbin.co.")]
+struct App {
+    #[argh(
+        option,
+        description = "emoji preview resolution.",
+        default = "Resolution::HDPI"
+    )]
+    resolution: Resolution,
+
+    #[argh(option, description = "limit the amount of results returned.")]
+    limit: Option<usize>,
+
+    #[argh(switch, description = "filter out r18 emoji.")]
+    sfw: bool,
+
+    #[argh(option, description = "list of tags to search by.")]
+    tag: Vec<String>,
+
+    #[argh(option, description = "list of categories to search by.")]
+    category: Vec<String>,
+
+    #[argh(option, description = "code.")]
+    code: Option<String>,
+}
+
+fn main() {
+    let App {
+        sfw,
+        tag,
+        category,
+        code,
+        resolution,
+        limit,
+    } = argh::from_env();
+
+    let tmp_dir = env::temp_dir();
+
+    let tags = tag
+        .into_iter()
+        .map(|tag| ("tags[]", tag))
+        .collect::<Vec<_>>();
+
+    let category = category
+        .into_iter()
+        .map(|category| ("categories[]", category))
+        .collect::<Vec<_>>();
+
+    let code = if code.is_none() && tags.is_empty() && category.is_empty() {
+        vec![("code_cont", "ferris".to_string())]
+    } else {
+        vec![("code_cont", code.unwrap_or_else(|| "".to_string()))]
+    };
+
+    let terms = tags
+        .into_iter()
+        .chain(category)
+        .chain(code)
+        .collect::<Vec<(&str, String)>>();
+
+    let client = Client::new();
+    let res = client
+        .get(format!("{}/search/emoji", BASE_API_URL))
+        .form(&terms)
+        .send()
+        .expect("unexpected error while uploading file");
+
+    if res.status() != 200 {
+        panic!("Unexpected status code {}", res.status());
+    }
+
+    let SearchResponse { emoji, .. } = res.json().expect("should be able to deserialize body");
+    for emoji in emoji.into_iter().take(limit.unwrap_or(usize::MAX)) {
+        if sfw && emoji.r18 {
+            continue;
+        }
+
+        println!("\x1B[1m[{}]\x1B[0m\n", emoji.code.clone());
+
+        let encoded_code = emoji.code.replace(" ", "_");
+        let svg_url = format!("{}/{}.svg", BASE_CDN_URL, encoded_code.clone());
+
+        println!("\x1B[1mURL:\x1B[0m\n\t{}\n", svg_url.clone());
+
+        println!(
+            "\x1B[1mHTML:\x1B[0m\n\t<img class=\"emojidex-emoji\" src=\"{}\" emoji-code=\"{}\" alt=\"{}\"{} />\n",
+            svg_url.clone(),
+            encoded_code.clone(),
+            emoji.code.clone(),
+            emoji
+                .moji
+                .as_ref()
+                .map(|moji| format!(" emoji-moji=\"{}\"", moji))
+                .unwrap_or_else(|| "".to_string()),
+        );
+
+        println!(
+            "\x1B[1mMD:\x1B[0m\n\t![{}]({} \"{}\")\n",
+            emoji.moji.unwrap_or(encoded_code.clone()),
+            svg_url.clone(),
+            emoji.code.clone(),
+        );
+        if resolution != Resolution::None {
+            let filepath = tmp_dir.join(format!("{}.png", encoded_code));
+            let mut file = File::create(filepath.clone()).expect("should be able to create file");
+
+            let mut res = client
+                .get(format!(
+                    "{}/{}/{}.png",
+                    BASE_CDN_URL,
+                    <Resolution as Into<String>>::into(resolution),
+                    encoded_code,
+                ))
+                .send()
+                .expect("should be able to get image");
+            io::copy(&mut res, &mut file).expect("should be able to copy file");
+
+            viuer::print_from_file(
+                filepath.to_str().unwrap(),
+                &Config {
+                    absolute_offset: false,
+                    ..Default::default()
+                },
+            )
+            .expect("Image printing failed.");
+        }
+
+        println!();
+    }
+}
