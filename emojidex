@@ -145,7 +145,7 @@ struct App {
     #[argh(option, description = "list of categories to search by.")]
     category: Vec<String>,
 
-    #[argh(option, description = "code.")]
+    #[argh(option, description = "code to search for.")]
     code: Option<String>,
 }
 
