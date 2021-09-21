@@ -1,0 +1,44 @@
+#!/usr/bin/env -S cargo eval --
+
+// cargo-deps: argh = "0.1"
+
+use argh::FromArgs;
+
+use std::net::TcpListener;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::str;
+
+#[derive(FromArgs)]
+#[argh(description = "simple debug server which logs the data sent to it.")]
+struct App {
+    #[argh(
+        option,
+        description = "interface to listen on.",
+        default = "\"0.0.0.0\".to_string()"
+    )]
+    host: String,
+
+    #[argh(option, description = "port to listen on.", default = "7331")]
+    port: u16,
+}
+
+fn main() {
+    let app: App = argh::from_env();
+
+    let address = format!("{}:{}", app.host, app.port);
+    let listener = TcpListener::bind(&address).expect("should be able to start server");
+
+    println!("Listening on {}", address);
+
+    for stream in listener.incoming() {
+        let stream = stream.expect("stream should be present");
+        let mut stream = BufReader::new(stream);
+
+	// This is not the "best" way to get the data sent over
+	// but it sure is the easiest :^)
+    	let data = stream.fill_buf().expect("should have data");
+    	let output = str::from_utf8(data).expect("should be able to parse data as text");
+    	println!("{}", output);
+    }
+}

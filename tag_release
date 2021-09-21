@@ -1,0 +1,29 @@
+#!/usr/bin/env -S cargo eval --
+
+// cargo-deps: argh = "0.1", chrono = "0.4"
+
+use argh::FromArgs;
+use chrono::prelude::*;
+
+#[derive(FromArgs)]
+#[argh(description = "Simple program to kill a process listening on a specific port.")]
+struct App {
+    #[argh(
+        option,
+        description = "how to format the date tag.",
+        default = "\"v%Y%m%d-%H%M\".to_string()"
+    )]
+    format: String,
+}
+
+fn main() {
+    let app: App = argh::from_env();
+
+
+    let tag = Utc::now().format(&app.format).to_string(); 
+
+    println!("# Run the following to tag and release this version");
+    println!();
+    println!("git tag -a {} -m \"\"", tag);
+    println!("git push origin --tags");
+}
