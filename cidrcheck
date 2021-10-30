@@ -1,0 +1,59 @@
+#!/usr/bin/env -S cargo eval --
+
+// cargo-deps: argh = "0.1", cidr = "0.2.1"
+
+use argh::FromArgs;
+use cidr::IpCidr;
+
+use std::net::IpAddr;
+use std::str::FromStr;
+
+#[derive(FromArgs)]
+#[argh(description = "Display the ip range for a CIDR and check if an ip falls within.")]
+struct App {
+    #[argh(
+        option,
+        description = "ip that will be checked against the provided CIDR.",
+        from_str_fn(parse_ip)
+    )]
+    ip: Option<IpAddr>,
+
+    #[argh(
+        positional, 
+        description = "CIDR to inspect", 
+        from_str_fn(parse_cidr)
+    )]
+    cidr: IpCidr,
+}
+
+fn main() {
+    let App { ip, cidr } = argh::from_env();
+    println!(
+        "CIDR {} has a range of: {} to {}", 
+        cidr, 
+        cidr.first_address(), 
+        cidr.last_address()
+    );
+
+    println!("CIDR {} has a netmask of {}", cidr, cidr.mask());
+    
+    if let Some(ip) = ip {
+        print!("IP {}", ip);
+        let falls_within = cidr.contains(&ip);
+        if falls_within {
+            print!(" falls ");
+        } else {
+            print!(" does not fall ");
+        }
+
+	    println!("within {}", cidr);
+    }
+}
+
+fn parse_ip(value: &str) -> Result<IpAddr, String> {
+    IpAddr::from_str(value).map_err(|e| format!("{}", e))
+}
+
+fn parse_cidr(value: &str) -> Result<IpCidr, String> {
+    IpCidr::from_str(value).map_err(|e| format!("{}", e))
+}
