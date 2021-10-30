@@ -14,7 +14,7 @@ struct App {
     #[argh(
         option,
         description = "ip that will be checked against the provided CIDR.",
-	from_str_fn(parse_ip)
+        from_str_fn(parse_ip)
     )]
     ip: Option<IpAddr>,
 
@@ -38,15 +38,15 @@ fn main() {
     println!("CIDR {} has a netmask of {}", cidr, cidr.mask());
     
     if let Some(ip) = ip {
-	print!("IP {}", ip);
-	let falls_within = cidr.contains(&ip);
-	if falls_within { 
-	    print!(" falls "); 
-	} else {
-    	    print!(" does not fall ");
-	}
+        print!("IP {}", ip);
+        let falls_within = cidr.contains(&ip);
+        if falls_within {
+            print!(" falls ");
+        } else {
+            print!(" does not fall ");
+        }
 
-	println!("within {}", cidr);
+	    println!("within {}", cidr);
     }
 }
 
