@@ -2,12 +2,11 @@
 
 // cargo-deps: argh = "0.1", object = "0.24.0"
 
-use argh::FromArgs;
-
 use std::fs::OpenOptions;
 use std::io::{self, BufReader, Read, Write};
 use std::path::PathBuf;
 
+use argh::FromArgs;
 use object::{File, Object, ObjectSection, SectionKind};
 
 const MIN_STR_LEN: usize = 4;

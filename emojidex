@@ -9,14 +9,14 @@
 //! image = "0.23.14"
 //! ```
 
+use std::io::{BufReader, Cursor};
+use std::str::FromStr;
+
 use argh::FromArgs;
 use image::io::Reader;
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use viuer::Config;
-
-use std::io::{BufReader, Cursor};
-use std::str::FromStr;
 
 const BASE_API_URL: &str = "https://www.emojidex.com/api/v1";
 const BASE_CDN_URL: &str = "https://cdn.emojidex.com/emoji";
