@@ -19,8 +19,7 @@ struct App {
 fn main() {
     let app: App = argh::from_env();
 
-
-    let tag = Utc::now().format(&app.format).to_string(); 
+    let tag = Utc::now().format(&app.format).to_string();
 
     println!("# Run the following to tag and release this version");
     println!();

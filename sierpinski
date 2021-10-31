@@ -2,10 +2,10 @@
 
 // cargo-deps: argh = "0.1"
 
-use argh::FromArgs;
-
 use std::fmt;
 use std::str::FromStr;
+
+use argh::FromArgs;
 
 const DELTA: &str = "Δ";
 const FILLED_TRIANGLE: &str = "▲";

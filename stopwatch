@@ -2,10 +2,10 @@
 
 // cargo-deps: argh = "0.1", humantime = "2.1.0"
 
-use argh::FromArgs;
-
 use std::thread;
 use std::time::{Duration, Instant};
+
+use argh::FromArgs;
 
 #[derive(FromArgs)]
 #[argh(description = "Keep track of how long a task runs or set a timer for some period of time.")]

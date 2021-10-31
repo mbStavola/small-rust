@@ -6,14 +6,14 @@
 //! reqwest = { version = "0.11.3", features = ["blocking"] }
 //! ```
 
-use argh::FromArgs;
-use reqwest::blocking::Client;
-use reqwest::redirect::Policy;
-
 use std::fs::OpenOptions;
 use std::io::{BufReader, Read};
 use std::path::PathBuf;
 use std::str::FromStr;
+
+use argh::FromArgs;
+use reqwest::blocking::Client;
+use reqwest::redirect::Policy;
 
 const BASE_URL: &str = "https://ghostbin.co";
 

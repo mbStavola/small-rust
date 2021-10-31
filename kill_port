@@ -2,9 +2,9 @@
 
 // cargo-deps: argh = "0.1"
 
-use argh::FromArgs;
-
 use std::process::{self, Command};
+
+use argh::FromArgs;
 
 #[derive(FromArgs)]
 #[argh(description = "Simple program to kill a process listening on a specific port.")]
