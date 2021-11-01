@@ -1,0 +1,50 @@
+#!/usr/bin/env -S cargo eval --
+
+// cargo-deps: argh = "0.1", rexiv2 = "0.9.1"
+
+// This script requires gexiv2
+// Available through:
+// (Mac) brew install gexiv2
+
+use argh::FromArgs;
+use rexiv2::Metadata;
+
+#[derive(FromArgs)]
+#[argh(description = "Show and strip EXIF data from image files.")]
+struct App {
+    #[argh(switch, description = "show EXIF info (just tags for now)")]
+    show: bool,
+
+    #[argh(switch, description = "strip EXIF info")]
+    strip: bool,
+
+    #[argh(positional, description = "path to file(s)")]
+    paths: Vec<String>,
+}
+
+fn main() {
+    let App { show, strip, paths } = argh::from_env();
+
+    if !show && !strip {
+        eprintln!("Either --show or --strip is required");
+        return;
+    } else if paths.is_empty() {
+        eprintln!("Must provide at least one path");
+        return;
+    }
+
+    for path in paths {
+        let meta = Metadata::new_from_path(&path).expect("should be able to open metadata");
+
+        if show {
+            let tags = meta.get_exif_tags().expect("should be able to get tags");
+            println!("Available EXIF tags: {}", tags.join(", "));
+        }
+
+        if strip {
+            println!("Clearing EXIF data from: {:?}", path);
+            meta.clear_exif();
+            meta.save_to_file(&path).expect("should be able to resave");
+        }
+    }
+}
