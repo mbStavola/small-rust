@@ -15,7 +15,7 @@ struct App {
     #[argh(
         option,
         description = "which signal to send to the process. defaults to kill.",
-        default = "String::from(\"9\")"
+        default = "String::from(\"kill\")"
     )]
     signal: String,
 
