@@ -1,6 +1,11 @@
-#!/usr/bin/env -S cargo eval --
+#!/usr/bin/env -S cargo +nightly -Zscript
 
-// cargo-deps: argh = "0.1"
+---
+[package]
+edition = "2024"
+[dependencies]
+argh = "0.1"
+---
 
 use std::fmt;
 use std::str::FromStr;
@@ -85,21 +90,21 @@ fn main() {
     let height = 2_usize.pow(size as u32);
     let width = (2 * height) - 1;
 
-    let mut bounding_box = vec![vec![0_u16; width]; height];
+    let mut bounding_box = vec![vec![0_u8; width]; height];
     bounding_box[0][height - 1] = 1;
 
     let mut last_row = bounding_box[0].clone();
     for row in bounding_box.iter_mut().skip(1) {
         for (j, cell) in row.iter_mut().enumerate() {
-            let top_left = last_row.get(j - 1).unwrap_or(&0);
-            let top_right = last_row.get(j + 1).unwrap_or(&0);
+            let top_left = j.checked_sub(1).and_then(|i| last_row.get(i)).unwrap_or(&0);
+            let top_right = j.checked_add(1).and_then(|i| last_row.get(i)).unwrap_or(&0);
 
-            *cell = top_left + top_right;
+            *cell = (top_left + top_right) % 2;
         }
         last_row = row.clone();
     }
 
-    let rows: Box<dyn Iterator<Item = Vec<u16>>> = if invert {
+    let rows: Box<dyn Iterator<Item = Vec<u8>>> = if invert {
         Box::new(bounding_box.into_iter().rev())
     } else {
         Box::new(bounding_box.into_iter())

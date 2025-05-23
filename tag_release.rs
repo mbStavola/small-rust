@@ -1,12 +1,18 @@
-#!/usr/bin/env -S cargo eval --
+#!/usr/bin/env -S cargo +nightly -Zscript
 
-// cargo-deps: argh = "0.1", chrono = "0.4"
+---
+[package]
+edition = "2024"
+[dependencies]
+argh = "0.1"
+crono = "0.4"
+---
 
 use argh::FromArgs;
 use chrono::prelude::*;
 
 #[derive(FromArgs)]
-#[argh(description = "Simple program to kill a process listening on a specific port.")]
+#[argh(description = "Utility to help tag a git release.")]
 struct App {
     #[argh(
         option,

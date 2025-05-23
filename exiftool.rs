@@ -1,6 +1,13 @@
-#!/usr/bin/env -S cargo eval --
 
-// cargo-deps: argh = "0.1", rexiv2 = "0.9.1"
+#!/usr/bin/env -S cargo +nightly -Zscript
+
+---
+[package]
+edition = "2024"
+[dependencies]
+argh = "0.1"
+rexiv2 = "0.9.1"
+---
 
 // This script requires gexiv2
 // Available through:

@@ -1,6 +1,12 @@
-#!/usr/bin/env -S cargo eval --
+#!/usr/bin/env -S cargo +nightly -Zscript
 
-// cargo-deps: argh = "0.1", cidr = "0.2.1"
+---
+[package]
+edition = "2024"
+[dependencies]
+argh = "0.1"
+cidr = "0.2.1"
+---
 
 use std::net::IpAddr;
 use std::str::FromStr;

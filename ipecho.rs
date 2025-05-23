@@ -1,9 +1,11 @@
-#!/usr/bin/env -S cargo eval --
+#!/usr/bin/env -S cargo +nightly -Zscript
 
-//! ```cargo
-//! [dependencies]
-//! reqwest = { version = "0.11.3", features = ["blocking"] }
-//! ```
+---
+[package]
+edition = "2024"
+[dependencies]
+reqwest = { version = "0.11.3", features = ["blocking"] }
+---
 
 use reqwest::blocking::Client;
 

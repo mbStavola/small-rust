@@ -1,10 +1,12 @@
-#!/usr/bin/env -S cargo eval --
+#!/usr/bin/env -S cargo +nightly -Zscript
 
-//! ```cargo
-//! [dependencies]
-//! argh = "0.1"
-//! reqwest = { version = "0.11.3", features = ["blocking"] }
-//! ```
+---
+[package]
+edition = "2024"
+[dependencies]
+argh = "0.1"
+reqwest = { version = "0.11.3", features = ["blocking"] }
+---
 
 use std::fs::OpenOptions;
 use std::io::{BufReader, Read};

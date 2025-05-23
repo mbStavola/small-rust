@@ -1,6 +1,11 @@
-#!/usr/bin/env -S cargo eval --
+#!/usr/bin/env -S cargo +nightly -Zscript
 
-// cargo-deps: argh = "0.1"
+---
+[package]
+edition = "2024"
+[dependencies]
+argh = "0.1"
+---
 
 use std::io::{BufRead, BufReader};
 use std::net::TcpListener;

@@ -1,6 +1,12 @@
-#!/usr/bin/env -S cargo eval --
+#!/usr/bin/env -S cargo +nightly -Zscript
 
-// cargo-deps: argh = "0.1", humantime = "2.1.0"
+---
+[package]
+edition = "2024"
+[dependencies]
+argh = "0.1"
+humantime = "2.1.0"
+---
 
 use std::thread;
 use std::time::{Duration, Instant};

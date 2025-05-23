@@ -1,13 +1,15 @@
-#!/usr/bin/env -S cargo eval --
+#!/usr/bin/env -S cargo +nightly -Zscript
 
-//! ```cargo
-//! [dependencies]
-//! argh = "0.1"
-//! reqwest = { version = "0.11.3", features = ["blocking", "json"] }
-//! serde = { version = "1.0", features = ["derive"] }
-//! viuer = "0.4.0"
-//! image = "0.23.14"
-//! ```
+---
+[package]
+edition = "2024"
+[dependencies]
+argh = "0.1"
+reqwest = { version = "0.11.3", features = ["blocking", "json"] }
+serde = { version = "1.0", features = ["derive"] }
+viuer = "0.4.0"
+image = "0.23.14"
+---
 
 use std::io::{BufReader, Cursor};
 use std::str::FromStr;

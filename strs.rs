@@ -1,6 +1,12 @@
-#!/usr/bin/env -S cargo eval --
+#!/usr/bin/env -S cargo +nightly -Zscript
 
-// cargo-deps: argh = "0.1", object = "0.24.0"
+---
+[package]
+edition = "2024"
+[dependencies]
+argh = "0.1"
+object = "0.24.0"
+---
 
 use std::fs::OpenOptions;
 use std::io::{self, BufReader, Read, Write};
