@@ -5,7 +5,7 @@
 edition = "2024"
 [dependencies]
 argh = "0.1"
-object = "0.24.0"
+object = "0.38.0"
 ---
 
 use std::fs::OpenOptions;
@@ -87,7 +87,12 @@ fn print_object_strings(handle: &mut impl Write, contents: &[u8], all: bool, min
     let object = File::parse(contents).expect("Could not parse object file");
     object
         .sections()
-        .filter(|section| all || section.kind() == SectionKind::Data)
+        .filter(|section| {
+            all || matches!(
+                section.kind(),
+                SectionKind::Data | SectionKind::ReadOnlyString | SectionKind::ReadOnlyData
+            )
+        })
         .for_each(|section| {
             let contents = section.data().expect("section should have data");
             print_strings(handle, contents, min_length);

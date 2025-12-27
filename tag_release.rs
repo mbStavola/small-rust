@@ -5,7 +5,7 @@
 edition = "2024"
 [dependencies]
 argh = "0.1"
-crono = "0.4"
+chrono = "0.4"
 ---
 
 use argh::FromArgs;

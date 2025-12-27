@@ -5,7 +5,7 @@
 edition = "2024"
 [dependencies]
 argh = "0.1"
-cidr = "0.2.1"
+cidr = "0.3.2"
 ---
 
 use std::net::IpAddr;

@@ -31,6 +31,9 @@ struct App {
 
     #[argh(option, description = "how long to run the stopwatch.")]
     duration: Option<humantime::Duration>,
+
+    #[argh(switch, description = "disable terminal bell when stopped.")]
+    no_ring: bool,
 }
 
 fn main() {
@@ -42,23 +45,29 @@ fn main() {
         .duration
         .map(|d| d.into())
         .unwrap_or_else(|| Duration::new(u64::MAX, 0));
+    let no_ring = app.no_ring;
 
     if let Some(delay) = delay {
         println!("Waiting {:?}...", delay);
         thread::sleep(delay);
     }
 
+    let bell = if no_ring { "" } else { "\x07" };
+
     let now = Instant::now();
 
+    print!("\x1B[?25l");
     let mut elapsed = now.elapsed();
     while elapsed < duration {
-        print!("\x1B[2K\rElapsed: {}", humantime::format_duration(elapsed));
+        print!("\rElapsed: {}\x1B[K", humantime::format_duration(elapsed));
         thread::sleep(pause);
         elapsed = now.elapsed();
     }
+    print!("\x1B[?25h");
 
     print!(
-        "\x1B[2K\rElapsed: {}\nStopped\x07",
-        humantime::format_duration(elapsed)
+        "\x1B[2K\rElapsed: {}\nStopped{}",
+        humantime::format_duration(elapsed),
+        bell
     );
 }
